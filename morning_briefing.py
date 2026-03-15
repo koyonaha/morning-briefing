@@ -198,12 +198,16 @@ def main():
     jst = ZoneInfo('Asia/Tokyo')
     now = datetime.now(jst)
     hour = now.hour
+    minute = now.minute
+
+    logger.info(f"Current time (JST): {now.strftime('%Y-%m-%d %H:%M:%S')}")
 
     date_and_day = get_date_and_day()
     weather = get_weather()
     bitcoin = get_bitcoin_price()
 
-    if 6 <= hour < 12:
+    # Morning briefing: 6 AM (6:00-6:59)
+    if hour == 6:
         logger.info("Sending morning briefing...")
         events = get_morning_events()
 
@@ -215,7 +219,8 @@ def main():
 
 {events}"""
 
-    elif 12 <= hour < 18:
+    # Afternoon briefing: 12 PM (12:00-12:59)
+    elif hour == 12:
         logger.info("Sending afternoon briefing...")
         events = get_afternoon_events()
 
@@ -228,11 +233,13 @@ def main():
 {events}"""
 
     else:
-        logger.info("Out of briefing time")
+        logger.info(f"Out of briefing time (current hour: {hour})")
         return
 
+    logger.info(f"Sending message at {now.strftime('%H:%M:%S')}")
     logger.info(f"Message:\n{message}")
     send_telegram_message(message)
+    logger.info("Message sent successfully")
 
 if __name__ == "__main__":
     main()

@@ -1,11 +1,11 @@
-name: Morning Briefing (6 AM JST)
+name: Afternoon Briefing (12 PM JST)
 
 on:
   schedule:
-    - cron: '0 21 * * *'  # 朝6時 JST (21時 UTC)
+    - cron: '0 3 * * *'   # 昼12時 JST (3時 UTC)
 
 jobs:
-  send-morning-briefing:
+  send-afternoon-briefing:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -20,7 +20,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run morning briefing script
+      - name: Run afternoon briefing script
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_USER_ID: ${{ secrets.TELEGRAM_USER_ID }}
