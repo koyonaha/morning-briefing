@@ -1,0 +1,38 @@
+name: Test Briefing (Manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      briefing_type:
+        description: 'Briefing type (morning or afternoon)'
+        required: true
+        default: 'morning'
+        type: choice
+        options:
+          - morning
+          - afternoon
+
+jobs:
+  test-briefing:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run test briefing
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_USER_ID: ${{ secrets.TELEGRAM_USER_ID }}
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+          TZ: Asia/Tokyo
+          BRIEFING_TYPE: ${{ inputs.briefing_type }}
+        run: python morning_briefing.py
