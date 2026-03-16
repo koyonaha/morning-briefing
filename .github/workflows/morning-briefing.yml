@@ -25,4 +25,7 @@ on:
                                                                                                                 TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
                                                                                                                           TELEGRAM_USER_ID: ${{ secrets.TELEGRAM_USER_ID }}
                                                                                                                                     GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
-                                                                                                                                            run: python morning_briefing.py
+                                                                                                                                              TZ: Asia/Tokyo
+                                                                                                                                                        BRIEFING_TYPE: morning
+                                                                                                                                                                run: python morning_briefing.py
+                                                                                                                                                                
