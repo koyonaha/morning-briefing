@@ -238,6 +238,29 @@ def get_weather():
         logger.error(f"Error getting weather: {e}")
         return "天気取得エラー"
 
+def get_daily_message():
+    """Get a random motivational/informational message for the day"""
+    import random
+
+    messages = [
+        "小さな工夫が大きな成果を生む。今日も一歩ずつ前に進もう！",
+        "今日の成功は昨日の準備から生まれる。準備万端で挑もう！",
+        "チャレンジなくして成長なし。新しいことにチャレンジしよう！",
+        "完璧を目指さず、進歩を重ねることが大切。今日も前へ！",
+        "周囲への感謝の気持ちを忘れずに。今日も全力を尽くそう！",
+        "時間は最大の資源。今この瞬間を大切にしよう。",
+        "失敗は学びの機会。恐れずにチャレンジしよう！",
+        "一日一日の積み重ねが人生を作る。今日も大事に過ごそう！",
+        "良い習慣が良い結果を生む。今日も一つ良い習慣を！",
+        "目標を忘れずに、今日のタスクに集中しよう！",
+        "仕事も人生も、バランスが大切。今日も心と体のケアを！",
+        "周りの人の笑顔を増やすことが、自分の幸福につながる。",
+        "今日の小さな決定が、明日の大きな変化を生む。",
+        "ストレスは敵ではなく、成長のチャンス。前向きに！",
+    ]
+
+    return random.choice(messages)
+
 def send_telegram_message(text):
     """Send message via Telegram Bot"""
     try:
@@ -284,6 +307,7 @@ def main():
         date_and_day = get_date_info()
         weather = get_weather()
         bitcoin = get_bitcoin_price()
+        daily_message = get_daily_message()
 
         # Determine which briefing to send
         is_morning = (hour == 6) or (briefing_type == 'morning')
@@ -294,32 +318,42 @@ def main():
             logger.info("Sending morning briefing...")
             events = get_morning_events()
 
-            message = f"""☀️ おはようございます!
+            message = f"""🌅 朝の総合ブリーフィング
 
-{date_and_day}
+📅 {date_and_day}
 
-{weather}
+🌡️ {weather}
 
-{bitcoin}
+💰 {bitcoin}
 
-スケジュール:
-{events}"""
+📋 本日のスケジュール:
+{events}
+
+💪 本日のメッセージ:
+「{daily_message}」
+
+Have a productive day! 🚀"""
 
         # Afternoon briefing: 12 PM (12:00-12:59)
         elif is_afternoon:
             logger.info("Sending afternoon briefing...")
             events = get_afternoon_events()
 
-            message = f"""🌤️ こんにちは!
+            message = f"""☀️ 午後のブリーフィング
 
-{date_and_day}
+📅 {date_and_day}
 
-{weather}
+🌡️ {weather}
 
-{bitcoin}
+💰 {bitcoin}
 
-午後のスケジュール:
-{events}"""
+📋 午後のスケジュール:
+{events}
+
+💪 本日のメッセージ:
+「{daily_message}」
+
+Have a great afternoon! 🎯"""
 
         else:
             logger.info(f"Out of briefing time (current hour: {hour})")
