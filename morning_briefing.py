@@ -90,7 +90,7 @@ def get_events_from_calendars(morning=True):
             scopes=SCOPES
         )
 
-        service = build('calendar', 'v3', credentials=credentials)
+        service = build('calendar', 'v3', credentials=credentials, cache_discovery=False)
 
         jst = ZoneInfo('Asia/Tokyo')
         today = datetime.now(jst).date()
