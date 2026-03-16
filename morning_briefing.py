@@ -241,17 +241,31 @@ def get_weather():
 def send_telegram_message(text):
     """Send message via Telegram Bot"""
     try:
+        if not TELEGRAM_BOT_TOKEN:
+            raise ValueError("TELEGRAM_BOT_TOKEN is not set")
+        if not TELEGRAM_USER_ID:
+            raise ValueError("TELEGRAM_USER_ID is not set")
+
         url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
         payload = {
             'chat_id': TELEGRAM_USER_ID,
             'text': text,
             'parse_mode': 'plain'
         }
+
+        logger.info(f"Sending Telegram message to chat_id: {TELEGRAM_USER_ID}")
         response = requests.post(url, json=payload, timeout=10)
         response.raise_for_status()
-        logger.info("Message sent successfully to Telegram")
+
+        result = response.json()
+        if result.get('ok'):
+            logger.info(f"Message sent successfully to Telegram (message_id: {result.get('result', {}).get('message_id')})")
+        else:
+            logger.error(f"Telegram API returned error: {result}")
+
     except Exception as e:
-        logger.error(f"Error sending Telegram message: {e}")
+        logger.error(f"Error sending Telegram message: {e}", exc_info=True)
+        raise
 
 def main():
     """Main function to compile and send the briefing"""
@@ -259,19 +273,28 @@ def main():
     now = datetime.now(jst)
     hour = now.hour
     minute = now.minute
+    briefing_type = os.getenv('BRIEFING_TYPE', 'auto')
 
+    logger.info(f"=== Briefing Script Started ===")
     logger.info(f"Current time (JST): {now.strftime('%Y-%m-%d %H:%M:%S')}")
+    logger.info(f"Current hour: {hour}, minute: {minute}")
+    logger.info(f"Briefing type: {briefing_type}")
 
-    date_and_day = get_date_info()
-    weather = get_weather()
-    bitcoin = get_bitcoin_price()
+    try:
+        date_and_day = get_date_info()
+        weather = get_weather()
+        bitcoin = get_bitcoin_price()
 
-    # Morning briefing: 6 AM (6:00-6:59)
-    if hour == 6:
-        logger.info("Sending morning briefing...")
-        events = get_morning_events()
+        # Determine which briefing to send
+        is_morning = (hour == 6) or (briefing_type == 'morning')
+        is_afternoon = (hour == 12) or (briefing_type == 'afternoon')
 
-        message = f"""☀️ おはようございます!
+        # Morning briefing: 6 AM (6:00-6:59)
+        if is_morning:
+            logger.info("Sending morning briefing...")
+            events = get_morning_events()
+
+            message = f"""☀️ おはようございます!
 
 {date_and_day}
 
@@ -282,12 +305,12 @@ def main():
 スケジュール:
 {events}"""
 
-    # Afternoon briefing: 12 PM (12:00-12:59)
-    elif hour == 12:
-        logger.info("Sending afternoon briefing...")
-        events = get_afternoon_events()
+        # Afternoon briefing: 12 PM (12:00-12:59)
+        elif is_afternoon:
+            logger.info("Sending afternoon briefing...")
+            events = get_afternoon_events()
 
-        message = f"""🌤️ こんにちは!
+            message = f"""🌤️ こんにちは!
 
 {date_and_day}
 
@@ -298,14 +321,18 @@ def main():
 午後のスケジュール:
 {events}"""
 
-    else:
-        logger.info(f"Out of briefing time (current hour: {hour})")
-        return
+        else:
+            logger.info(f"Out of briefing time (current hour: {hour})")
+            return
 
-    logger.info(f"Sending message at {now.strftime('%H:%M:%S')}")
-    logger.info(f"Message:\n{message}")
-    send_telegram_message(message)
-    logger.info("Message sent successfully")
+        logger.info(f"Sending message at {now.strftime('%H:%M:%S')}")
+        logger.info(f"Message length: {len(message)} characters")
+        send_telegram_message(message)
+        logger.info("=== Message sent successfully ===")
+
+    except Exception as e:
+        logger.error(f"=== Error in main: {e} ===", exc_info=True)
+        raise
 
 if __name__ == "__main__":
     main()
