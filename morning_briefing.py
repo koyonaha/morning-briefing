@@ -105,8 +105,17 @@ def get_events_from_calendars(morning=True):
         all_events = []
         calendar_names = {}
 
+        # Get all calendars for this user
+        try:
+            calendar_list = service.calendarList().list().execute()
+            all_calendar_ids = [cal['id'] for cal in calendar_list.get('items', [])]
+            logger.info(f"Found {len(all_calendar_ids)} calendars: {all_calendar_ids}")
+        except Exception as e:
+            logger.error(f"Error fetching calendar list: {e}")
+            all_calendar_ids = CALENDAR_IDS
+
         # Fetch events from all calendars
-        for calendar_id in CALENDAR_IDS:
+        for calendar_id in all_calendar_ids:
             try:
                 # Get calendar display name
                 calendar_info = service.calendarList().get(calendarId=calendar_id).execute()
