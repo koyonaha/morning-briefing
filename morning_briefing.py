@@ -322,7 +322,7 @@ def main():
 
 📅 {date_and_day}
 
-🌡️ {weather}
+{weather}
 
 💰 {bitcoin}
 
@@ -343,7 +343,7 @@ Have a productive day! 🚀"""
 
 📅 {date_and_day}
 
-🌡️ {weather}
+{weather}
 
 💰 {bitcoin}
 
