@@ -118,8 +118,22 @@ def get_events_from_calendars(morning=True):
         for calendar_id in all_calendar_ids:
             try:
                 # Get calendar display name
-                calendar_info = service.calendarList().get(calendarId=calendar_id).execute()
-                calendar_names[calendar_id] = calendar_info.get('summary', calendar_id)
+                try:
+                    calendar_info = service.calendarList().get(calendarId=calendar_id).execute()
+                    calendar_names[calendar_id] = calendar_info.get('summary', calendar_id)
+                except Exception as get_error:
+                    # If calendar is not in calendarList, try to subscribe to it
+                    logger.info(f"Calendar {calendar_id} not in list, attempting to subscribe...")
+                    try:
+                        subscribe_result = service.calendarList().insert(
+                            body={'id': calendar_id}
+                        ).execute()
+                        calendar_names[calendar_id] = subscribe_result.get('summary', calendar_id)
+                        logger.info(f"Successfully subscribed to {calendar_id}")
+                    except Exception as subscribe_error:
+                        logger.warning(f"Could not subscribe to {calendar_id}: {subscribe_error}")
+                        # Use calendar_id as name if we can't get more info
+                        calendar_names[calendar_id] = calendar_id
 
                 events_result = service.events().list(
                     calendarId=calendar_id,
