@@ -109,6 +109,9 @@ def get_events_from_calendars(morning=True):
         try:
             calendar_list = service.calendarList().list().execute()
             all_calendar_ids = [cal['id'] for cal in calendar_list.get('items', [])]
+            # If API returns empty list, fall back to configured CALENDAR_IDS
+            if not all_calendar_ids:
+                all_calendar_ids = CALENDAR_IDS
             logger.info(f"Found {len(all_calendar_ids)} calendars: {all_calendar_ids}")
         except Exception as e:
             logger.error(f"Error fetching calendar list: {e}")
