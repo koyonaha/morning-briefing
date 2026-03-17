@@ -120,24 +120,17 @@ def get_events_from_calendars(morning=True):
         # Fetch events from all calendars
         for calendar_id in all_calendar_ids:
             try:
-                # Get calendar display name
+                # Try to get calendar display name from calendarList
                 try:
                     calendar_info = service.calendarList().get(calendarId=calendar_id).execute()
                     calendar_names[calendar_id] = calendar_info.get('summary', calendar_id)
-                except Exception as get_error:
-                    # If calendar is not in calendarList, try to subscribe to it
-                    logger.info(f"Calendar {calendar_id} not in list, attempting to subscribe...")
-                    try:
-                        subscribe_result = service.calendarList().insert(
-                            body={'id': calendar_id}
-                        ).execute()
-                        calendar_names[calendar_id] = subscribe_result.get('summary', calendar_id)
-                        logger.info(f"Successfully subscribed to {calendar_id}")
-                    except Exception as subscribe_error:
-                        logger.warning(f"Could not subscribe to {calendar_id}: {subscribe_error}")
-                        # Use calendar_id as name if we can't get more info
-                        calendar_names[calendar_id] = calendar_id
+                except Exception:
+                    # If not in calendarList, just use the calendar_id as name
+                    # The events() API works even if calendar isn't in CalendarList
+                    calendar_names[calendar_id] = calendar_id
+                    logger.info(f"Calendar {calendar_id} using ID as display name")
 
+                # Fetch events from this calendar
                 events_result = service.events().list(
                     calendarId=calendar_id,
                     timeMin=time_min,
@@ -153,6 +146,9 @@ def get_events_from_calendars(morning=True):
                     # Add calendar name to event
                     event['calendar_name'] = calendar_names[calendar_id]
                     all_events.append(event)
+
+                if events:
+                    logger.info(f"Found {len(events)} events from {calendar_id}")
 
             except Exception as e:
                 logger.error(f"Error fetching from {calendar_id}: {e}")
