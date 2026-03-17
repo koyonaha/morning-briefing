@@ -172,10 +172,8 @@ def get_events_from_calendars(morning=True):
             else:
                 start_time = "終日"
 
-            if calendar_name and calendar_name != CALENDAR_IDS[0]:
-                event_text += f"• {start_time} - {summary} ({calendar_name})\n"
-            else:
-                event_text += f"• {start_time} - {summary}\n"
+            # Display only event time and summary without calendar name
+            event_text += f"• {start_time} - {summary}\n"
 
         return event_text.strip()
 
