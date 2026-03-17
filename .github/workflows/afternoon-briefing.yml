@@ -27,5 +27,4 @@ jobs:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
           TZ: Asia/Tokyo
           BRIEFING_TYPE: afternoon
-                    ADDITIONAL_CALENDAR_IDS: "lqcha5ku1d6c6bsmmgsr3o9v58@group.calendar.google.com,dff14455f73afce7d65ee119456e1221709e76d4e193a3366982dcc3dd8de49f@group.calendar.google.com,l5aovm4lltlkspos4d2l3dk404@group.calendar.google.com,7de3375d912de8021a1f8949fc1c5e1bedbdeaa1278890ae7846c16386b8e123@group.calendar.google.com,b8ull37c87kmOvpbelhhl513c@group.calendar.google.com"
         run: python morning_briefing.py
