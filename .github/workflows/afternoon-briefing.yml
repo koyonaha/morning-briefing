@@ -4,6 +4,10 @@ on:
   schedule:
     - cron: '0 3 * * *'   # 昼12時 JST (3時 UTC)
 
+concurrency:
+  group: afternoon-briefing
+  cancel-in-progress: true
+
 jobs:
   send-afternoon-briefing:
     runs-on: ubuntu-latest
