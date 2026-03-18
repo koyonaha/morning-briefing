@@ -3,8 +3,7 @@ name: Afternoon Briefing (12 PM JST)
 on:
   workflow_dispatch:
   schedule:
-  - cron: '0 1 * * *' # 昼12時 JST (1時 UTC、遅延対応)
-concurrency:
+  - cron: '0 3 * * *' # 昼12時 JST (3時 UTC)concurrency:
   group: afternoon-briefing
   cancel-in-progress: true
 
