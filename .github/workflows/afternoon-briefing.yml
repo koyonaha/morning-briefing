@@ -1,6 +1,7 @@
 name: Afternoon Briefing (12 PM JST)
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: '0 3 * * *'   # 昼12時 JST (3時 UTC)
 
