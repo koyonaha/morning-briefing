@@ -329,9 +329,18 @@ def main():
         bitcoin = get_bitcoin_price()
         daily_message = get_daily_message()
 
-        # Determine which briefing to send
-        is_morning = (hour == 6) or (briefing_type == 'morning')
-        is_afternoon = (hour == 12) or (briefing_type == 'afternoon')
+        # Determine which briefing to send based on BRIEFING_TYPE environment variable
+        # This is set by GitHub Actions workflow and is the single source of truth
+        if briefing_type == 'morning':
+            is_morning = True
+            is_afternoon = False
+        elif briefing_type == 'afternoon':
+            is_morning = False
+            is_afternoon = True
+        else:
+            # Fallback: use current hour (for manual/test runs without BRIEFING_TYPE)
+            is_morning = (hour == 6)
+            is_afternoon = (hour == 12)
 
         # Morning briefing: 6 AM (6:00-6:59)
         if is_morning:
