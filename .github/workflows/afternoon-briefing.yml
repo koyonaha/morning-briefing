@@ -8,6 +8,9 @@ concurrency:
   group: afternoon-briefing
   cancel-in-progress: true
 
+env:
+  GITHUB_RUN_ID: ${{ github.run_id }}
+
 jobs:
   send-afternoon-briefing:
     runs-on: ubuntu-latest

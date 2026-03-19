@@ -1,6 +1,7 @@
 import os
 import json
 import requests
+import subprocess
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from google.oauth2 import service_account
@@ -9,6 +10,10 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# GitHub Actions環境検出
+GITHUB_RUN_ID = os.getenv('GITHUB_RUN_ID')
+GITHUB_WORKFLOW = os.getenv('GITHUB_WORKFLOW', 'manual')
 
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_USER_ID = os.getenv('TELEGRAM_USER_ID')
@@ -310,6 +315,92 @@ def send_telegram_message(text):
         raise
 
 
+def check_if_already_executed_today():
+    """
+    Check if this briefing type was already executed today in GitHub Actions.
+
+    Uses GITHUB_RUN_ID to detect the current execution context.
+    Compares against .github/run-log.json to prevent duplicate sends within same day.
+    """
+    if not GITHUB_RUN_ID:
+        # Not running in GitHub Actions, allow execution
+        logger.info("Not running in GitHub Actions (no GITHUB_RUN_ID). Proceeding.")
+        return False
+
+    jst = ZoneInfo('Asia/Tokyo')
+    today = datetime.now(jst).date()
+    briefing_type = os.getenv('BRIEFING_TYPE', 'auto')
+
+    try:
+        # Check git history for run-log.json
+        result = subprocess.run(
+            ['git', 'show', 'HEAD:.github/run-log.json'],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+
+        if result.returncode != 0:
+            logger.info("No previous run log found. This is the first execution today.")
+            return False
+
+        run_log = json.loads(result.stdout)
+        last_run_date = run_log.get(f'last_{briefing_type}_run_date')
+
+        if last_run_date == str(today):
+            logger.info(f"{briefing_type.capitalize()} briefing already executed today ({today}). Skipping.")
+            return True
+        else:
+            logger.info(f"Last {briefing_type} run was on {last_run_date}. Running today's briefing.")
+            return False
+
+    except Exception as e:
+        logger.warning(f"Could not check run log: {e}. Proceeding with execution.")
+        return False
+
+
+def save_execution_log():
+    """Save execution log to git to prevent duplicate sends."""
+    if not GITHUB_RUN_ID:
+        return
+
+    jst = ZoneInfo('Asia/Tokyo')
+    today = datetime.now(jst).date()
+    briefing_type = os.getenv('BRIEFING_TYPE', 'auto')
+
+    try:
+        log_file = '.github/run-log.json'
+
+        # Try to read existing log
+        try:
+            with open(log_file, 'r') as f:
+                run_log = json.load(f)
+        except FileNotFoundError:
+            run_log = {}
+
+        # Update log
+        run_log[f'last_{briefing_type}_run_date'] = str(today)
+        run_log[f'last_{briefing_type}_run_id'] = GITHUB_RUN_ID
+        run_log[f'last_{briefing_type}_run_time'] = datetime.now(jst).isoformat()
+
+        # Write log
+        with open(log_file, 'w') as f:
+            json.dump(run_log, f, indent=2)
+
+        # Commit and push
+        subprocess.run(['git', 'add', log_file], check=True)
+        subprocess.run([
+            'git', 'commit', '-m',
+            f'chore: Update execution log for {briefing_type} briefing'
+        ], check=True)
+        subprocess.run(['git', 'push', 'origin', 'main'], check=True)
+
+        logger.info(f"Execution log saved and pushed to GitHub.")
+
+    except Exception as e:
+        logger.warning(f"Could not save execution log: {e}. Continuing anyway.")
+
+
 def main():
     """Main function to compile and send the briefing"""
     jst = ZoneInfo('Asia/Tokyo')
@@ -320,8 +411,14 @@ def main():
 
     logger.info(f"=== Briefing Script Started ===")
     logger.info(f"Current time (JST): {now.strftime('%Y-%m-%d %H:%M:%S')}")
+    logger.info(f"GitHub Run ID: {GITHUB_RUN_ID}")
     logger.info(f"Current hour: {hour}, minute: {minute}")
     logger.info(f"Briefing type: {briefing_type}")
+
+    # Check if already executed today (daily execution lock)
+    if check_if_already_executed_today():
+        logger.info("This briefing was already executed today. Exiting to prevent duplicate sends.")
+        return
 
     try:
         date_and_day = get_date_info()
@@ -400,6 +497,9 @@ Have a great afternoon! 🎯"""
         logger.info(f"Message length: {len(message)} characters")
         send_telegram_message(message)
         logger.info("=== Message sent successfully ===")
+
+        # Save execution log to prevent duplicate sends in future runs
+        save_execution_log()
 
     except Exception as e:
         logger.error(f"=== Error in main: {e} ===", exc_info=True)
