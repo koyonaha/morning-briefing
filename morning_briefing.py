@@ -330,11 +330,19 @@ def main():
         daily_message = get_daily_message()
 
         # Determine which briefing to send based on BRIEFING_TYPE environment variable
-        # This is set by GitHub Actions workflow and is the single source of truth
+        # Critical: Add strict time checking to prevent duplicate sends at wrong hours
         if briefing_type == 'morning':
+            # Morning briefing ONLY runs during 6:00-6:59 JST
+            if hour != 6:
+                logger.info(f"Morning briefing scheduled but current hour is {hour}. Skipping to prevent out-of-time execution.")
+                return
             is_morning = True
             is_afternoon = False
         elif briefing_type == 'afternoon':
+            # Afternoon briefing ONLY runs during 12:00-12:59 JST
+            if hour != 12:
+                logger.info(f"Afternoon briefing scheduled but current hour is {hour}. Skipping to prevent out-of-time execution.")
+                return
             is_morning = False
             is_afternoon = True
         else:
