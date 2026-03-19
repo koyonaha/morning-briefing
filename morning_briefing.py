@@ -309,6 +309,45 @@ def send_telegram_message(text):
         logger.error(f"Error sending Telegram message: {e}", exc_info=True)
         raise
 
+def check_if_message_sent_today():
+    """Check if a message was already sent today to prevent duplicate sends"""
+    try:
+        jst = ZoneInfo('Asia/Tokyo')
+        today = datetime.now(jst).date()
+        
+        # Get latest messages from Telegram
+        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getUpdates"
+        response = requests.get(url, timeout=10)
+        data = response.json()
+        
+        if not data.get('ok') or not data.get('result'):
+            logger.info("No previous messages found")
+            return False
+        
+        # Check the latest message date
+        for message in reversed(data.get('result', [])):
+            if 'message' in message:
+                msg_time = datetime.fromtimestamp(
+                    message['message']['date'],
+                    tz=jst
+                ).date()
+                
+                # If latest message is from today, skip
+                if msg_time == today:
+                    logger.info(f"Message already sent today ({msg_time}). Skipping to prevent duplicate sends...")
+                    return True
+                else:
+                    logger.info(f"Latest message from {msg_time}. Sending today's message.")
+                    return False
+        
+        return False
+        
+    except Exception as e:
+        logger.warning(f"Could not check message history: {e}")
+        # If check fails, proceed with sending
+        return False
+
+
 def main():
     """Main function to compile and send the briefing"""
     jst = ZoneInfo('Asia/Tokyo')
@@ -321,6 +360,11 @@ def main():
     logger.info(f"Current time (JST): {now.strftime('%Y-%m-%d %H:%M:%S')}")
     logger.info(f"Current hour: {hour}, minute: {minute}")
     logger.info(f"Briefing type: {briefing_type}")
+    # Check if message was already sent today
+    if check_if_message_sent_today():
+        logger.info("Skipping execution - message already sent today")
+        return
+
 
     try:
         date_and_day = get_date_info()
