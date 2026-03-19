@@ -2,7 +2,7 @@ name: Morning Briefing (6 AM JST)
 
 on:
   schedule:
-    - cron: '0 21 * * *'  # 朝6時 JST (21時 UTC)
+    - cron: '0 21 * * *'  # 朝6時 JST (UTC 21:00)
 
 concurrency:
   group: morning-briefing
