@@ -317,108 +317,59 @@ def send_telegram_message(text):
 
 def check_if_already_executed_today():
     """
-    Check if this briefing type was already executed today in GitHub Actions.
+    Check if this briefing was already sent today via Telegram API.
 
-    Uses GITHUB_RUN_ID to detect the current execution context.
-    Compares against .github/run-log.json to prevent duplicate sends within same day.
+    Uses Telegram message history as the single source of truth.
+    This is more reliable than git-based logging.
     """
-    if not GITHUB_RUN_ID:
-        # Not running in GitHub Actions, allow execution
-        logger.info("Not running in GitHub Actions (no GITHUB_RUN_ID). Proceeding.")
-        return False
-
-    jst = ZoneInfo('Asia/Tokyo')
-    today = datetime.now(jst).date()
     briefing_type = os.getenv('BRIEFING_TYPE', 'auto')
 
     try:
-        # Check git history for run-log.json
-        result = subprocess.run(
-            ['git', 'show', 'HEAD:.github/run-log.json'],
-            capture_output=True,
-            text=True,
-            timeout=5
-        )
+        jst = ZoneInfo('Asia/Tokyo')
+        today = datetime.now(jst).date()
 
-        if result.returncode != 0:
-            logger.info("No previous run log found. This is the first execution today.")
+        # Get messages from Telegram
+        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getUpdates?limit=100"
+        response = requests.get(url, timeout=10)
+        data = response.json()
+
+        if not data.get('ok') or not data.get('result'):
+            logger.info("Telegram: No messages found (first run).")
             return False
 
-        run_log = json.loads(result.stdout)
-        last_run_date = run_log.get(f'last_{briefing_type}_run_date')
+        # Check recent messages for today's briefing
+        briefing_indicator = '朝の総合ブリーフィング' if briefing_type == 'morning' else '午後のブリーフィング'
 
-        if last_run_date == str(today):
-            logger.info(f"{briefing_type.capitalize()} briefing already executed today ({today}). Skipping.")
-            return True
-        else:
-            logger.info(f"Last {briefing_type} run was on {last_run_date}. Running today's briefing.")
-            return False
+        for message in reversed(data.get('result', [])):
+            if 'message' not in message:
+                continue
+
+            msg_time = datetime.fromtimestamp(
+                message['message']['date'],
+                tz=jst
+            ).date()
+
+            msg_text = message['message'].get('text', '')
+
+            # Check if this briefing type was sent today
+            if msg_time == today and briefing_indicator in msg_text:
+                logger.info(f"Telegram: {briefing_type} briefing already sent today. Skipping to prevent duplicate.")
+                return True
+
+            # Stop checking if we've gone past today
+            if msg_time < today:
+                break
+
+        logger.info(f"Telegram: No {briefing_type} briefing sent today. Proceeding with send.")
+        return False
 
     except Exception as e:
-        logger.warning(f"Could not check run log: {e}. Proceeding with execution.")
+        logger.error(f"Telegram check failed: {e}", exc_info=True)
+        # On error, proceed with sending (fail-open)
+        logger.warning("Proceeding with send despite Telegram check failure.")
         return False
 
 
-def save_execution_log():
-    """Save execution log to git to prevent duplicate sends."""
-    if not GITHUB_RUN_ID:
-        return
-
-    jst = ZoneInfo('Asia/Tokyo')
-    today = datetime.now(jst).date()
-    briefing_type = os.getenv('BRIEFING_TYPE', 'auto')
-
-    try:
-        log_file = '.github/run-log.json'
-
-        # Try to read existing log
-        try:
-            with open(log_file, 'r') as f:
-                run_log = json.load(f)
-        except FileNotFoundError:
-            run_log = {}
-
-        # Update log
-        run_log[f'last_{briefing_type}_run_date'] = str(today)
-        run_log[f'last_{briefing_type}_run_id'] = GITHUB_RUN_ID
-        run_log[f'last_{briefing_type}_run_time'] = datetime.now(jst).isoformat()
-
-        # Write log
-        with open(log_file, 'w') as f:
-            json.dump(run_log, f, indent=2)
-
-        # Configure git for GitHub Actions environment
-        subprocess.run(['git', 'config', 'user.email', 'github-actions@github.com'],
-                      capture_output=True)
-        subprocess.run(['git', 'config', 'user.name', 'GitHub Actions'],
-                      capture_output=True)
-
-        # Commit and push with detailed logging
-        logger.info(f"Git: Adding {log_file}...")
-        result = subprocess.run(['git', 'add', log_file], capture_output=True, text=True)
-        if result.returncode != 0:
-            logger.warning(f"Git add failed: {result.stderr}")
-            return
-
-        logger.info(f"Git: Committing for {briefing_type} briefing...")
-        result = subprocess.run([
-            'git', 'commit', '-m',
-            f'chore: Update execution log for {briefing_type} briefing [skip ci]'
-        ], capture_output=True, text=True)
-        if result.returncode != 0:
-            logger.warning(f"Git commit failed: {result.stderr}")
-            return
-
-        logger.info(f"Git: Pushing to origin/main...")
-        result = subprocess.run(['git', 'push', 'origin', 'main'], capture_output=True, text=True)
-        if result.returncode != 0:
-            logger.warning(f"Git push failed: {result.stderr}")
-            return
-
-        logger.info(f"Execution log saved and pushed to GitHub successfully.")
-
-    except Exception as e:
-        logger.error(f"Error saving execution log: {e}", exc_info=True)
 
 
 def main():
@@ -517,9 +468,6 @@ Have a great afternoon! 🎯"""
         logger.info(f"Message length: {len(message)} characters")
         send_telegram_message(message)
         logger.info("=== Message sent successfully ===")
-
-        # Save execution log to prevent duplicate sends in future runs
-        save_execution_log()
 
     except Exception as e:
         logger.error(f"=== Error in main: {e} ===", exc_info=True)
