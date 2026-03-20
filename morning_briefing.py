@@ -387,18 +387,38 @@ def save_execution_log():
         with open(log_file, 'w') as f:
             json.dump(run_log, f, indent=2)
 
-        # Commit and push
-        subprocess.run(['git', 'add', log_file], check=True)
-        subprocess.run([
-            'git', 'commit', '-m',
-            f'chore: Update execution log for {briefing_type} briefing'
-        ], check=True)
-        subprocess.run(['git', 'push', 'origin', 'main'], check=True)
+        # Configure git for GitHub Actions environment
+        subprocess.run(['git', 'config', 'user.email', 'github-actions@github.com'],
+                      capture_output=True)
+        subprocess.run(['git', 'config', 'user.name', 'GitHub Actions'],
+                      capture_output=True)
 
-        logger.info(f"Execution log saved and pushed to GitHub.")
+        # Commit and push with detailed logging
+        logger.info(f"Git: Adding {log_file}...")
+        result = subprocess.run(['git', 'add', log_file], capture_output=True, text=True)
+        if result.returncode != 0:
+            logger.warning(f"Git add failed: {result.stderr}")
+            return
+
+        logger.info(f"Git: Committing for {briefing_type} briefing...")
+        result = subprocess.run([
+            'git', 'commit', '-m',
+            f'chore: Update execution log for {briefing_type} briefing [skip ci]'
+        ], capture_output=True, text=True)
+        if result.returncode != 0:
+            logger.warning(f"Git commit failed: {result.stderr}")
+            return
+
+        logger.info(f"Git: Pushing to origin/main...")
+        result = subprocess.run(['git', 'push', 'origin', 'main'], capture_output=True, text=True)
+        if result.returncode != 0:
+            logger.warning(f"Git push failed: {result.stderr}")
+            return
+
+        logger.info(f"Execution log saved and pushed to GitHub successfully.")
 
     except Exception as e:
-        logger.warning(f"Could not save execution log: {e}. Continuing anyway.")
+        logger.error(f"Error saving execution log: {e}", exc_info=True)
 
 
 def main():
