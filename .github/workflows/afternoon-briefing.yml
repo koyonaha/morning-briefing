@@ -2,7 +2,7 @@ name: Afternoon Briefing (12 PM JST)
 
 on:
   schedule:
-    - cron: '0 3 * * *'  # 昼12時 JST (UTC 3:00)
+    - cron: '0 1 * * *'  # JST 10:00発信 → 約2時間遅延で12時前後に届く (UTC 1:00)
 
 concurrency:
   group: afternoon-briefing
