@@ -214,6 +214,94 @@ def get_bitcoin_price():
         logger.error(f"Error getting Bitcoin price: {e}")
         return "Bitcoin価格取得エラー"
 
+def get_nikkei():
+    """Get Nikkei 225 index with daily change from Yahoo Finance"""
+    try:
+        url = "https://query1.finance.yahoo.com/v8/finance/chart/%5EN225"
+        params = {'range': '2d', 'interval': '1d'}
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        response = requests.get(url, params=params, headers=headers, timeout=10)
+        response.raise_for_status()
+
+        data = response.json()
+        result = data['chart']['result'][0]
+        closes = result['indicators']['quote'][0]['close']
+        # Filter out None values
+        closes = [c for c in closes if c is not None]
+
+        if len(closes) >= 2:
+            current = closes[-1]
+            previous = closes[-2]
+            change = current - previous
+            change_pct = (change / previous) * 100
+            sign = "+" if change >= 0 else ""
+            return f"📈 日経平均: ¥{current:,.0f}（{sign}{change:,.0f} / {sign}{change_pct:.2f}%）"
+        elif len(closes) == 1:
+            return f"📈 日経平均: ¥{closes[-1]:,.0f}"
+        else:
+            return "日経平均取得エラー"
+    except Exception as e:
+        logger.error(f"Error getting Nikkei 225: {e}")
+        return "日経平均取得エラー"
+
+def get_crude_oil():
+    """Get WTI crude oil price with daily change from Yahoo Finance"""
+    try:
+        url = "https://query1.finance.yahoo.com/v8/finance/chart/CL%3DF"
+        params = {'range': '2d', 'interval': '1d'}
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        response = requests.get(url, params=params, headers=headers, timeout=10)
+        response.raise_for_status()
+
+        data = response.json()
+        result = data['chart']['result'][0]
+        closes = result['indicators']['quote'][0]['close']
+        closes = [c for c in closes if c is not None]
+
+        if len(closes) >= 2:
+            current = closes[-1]
+            previous = closes[-2]
+            change = current - previous
+            change_pct = (change / previous) * 100
+            sign = "+" if change >= 0 else ""
+            return f"🛢️ 原油(WTI): ${current:,.2f}（{sign}{change:,.2f} / {sign}{change_pct:.2f}%）"
+        elif len(closes) == 1:
+            return f"🛢️ 原油(WTI): ${closes[-1]:,.2f}"
+        else:
+            return "原油価格取得エラー"
+    except Exception as e:
+        logger.error(f"Error getting crude oil price: {e}")
+        return "原油価格取得エラー"
+
+def get_gold():
+    """Get gold price with daily change from Yahoo Finance"""
+    try:
+        url = "https://query1.finance.yahoo.com/v8/finance/chart/GC%3DF"
+        params = {'range': '2d', 'interval': '1d'}
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        response = requests.get(url, params=params, headers=headers, timeout=10)
+        response.raise_for_status()
+
+        data = response.json()
+        result = data['chart']['result'][0]
+        closes = result['indicators']['quote'][0]['close']
+        closes = [c for c in closes if c is not None]
+
+        if len(closes) >= 2:
+            current = closes[-1]
+            previous = closes[-2]
+            change = current - previous
+            change_pct = (change / previous) * 100
+            sign = "+" if change >= 0 else ""
+            return f"🥇 金(GOLD): ${current:,.2f}（{sign}{change:,.2f} / {sign}{change_pct:.2f}%）"
+        elif len(closes) == 1:
+            return f"🥇 金(GOLD): ${closes[-1]:,.2f}"
+        else:
+            return "金価格取得エラー"
+    except Exception as e:
+        logger.error(f"Error getting gold price: {e}")
+        return "金価格取得エラー"
+
 def get_weather():
     """Get Tokyo weather with detailed temperature information"""
     try:
@@ -395,6 +483,9 @@ def main():
         date_and_day = get_date_info()
         weather = get_weather()
         bitcoin = get_bitcoin_price()
+        nikkei = get_nikkei()
+        crude_oil = get_crude_oil()
+        gold = get_gold()
         daily_message = get_daily_message()
 
         # Determine which briefing to send based on BRIEFING_TYPE environment variable
@@ -422,6 +513,9 @@ def main():
 {weather}
 
 💰 {bitcoin}
+{gold}
+{nikkei}
+{crude_oil}
 
 📋 本日のスケジュール:
 {events}
@@ -443,6 +537,9 @@ Have a productive day! 🚀"""
 {weather}
 
 💰 {bitcoin}
+{gold}
+{nikkei}
+{crude_oil}
 
 📋 午後のスケジュール:
 {events}
